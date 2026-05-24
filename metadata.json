@@ -1,0 +1,6 @@
+{
+  "name": "CloneGuard AI",
+  "description": "Defensive cybersecurity suite designed to detect and combat AI voice-cloning, synthetic deepfakes, and automated phishing scams.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

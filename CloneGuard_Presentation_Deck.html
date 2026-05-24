@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloneGuard AI // System Architecture & Project Report</title>
+    <style>
+        :root {
+            --dark-bg: #121214;
+            --carbon-slate: #1C1B1F;
+            --card-slate: #2B2930;
+            --terminal-green: #81C784;
+            --security-lavender: #D0BCFF;
+            --warning-orange: #FFB74D;
+            --critical-red: #E57373;
+            --accent-border: #49454F;
+            --text-main: #E2E8F0;
+            --text-muted: #938F99;
+            --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'SF Mono', Fira Code, JetBrains Mono, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-main);
+            font-family: var(--font-display);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navigation Header bar */
+        header.sys-header {
+            background-color: var(--carbon-slate);
+            border-bottom: 1px solid var(--accent-border);
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+            z-index: 100;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-mono);
+            font-weight: 900;
+            font-size: 14px;
+            letter-spacing: 1.5px;
+        }
+
+        .logo-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--terminal-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--terminal-green);
+        }
+
+        .header-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .meta-pill {
+            border: 1px solid rgba(208, 188, 255, 0.4);
+            background-color: rgba(208, 188, 255, 0.08);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: bold;
+            color: var(--security-lavender);
+        }
+
+        .meta-method {
+            color: var(--warning-orange);
+            border-color: rgba(255, 183, 77, 0.4);
+            background-color: rgba(255, 183, 77, 0.08);
+        }
+
+        /* Main Workspace split: Sidebar and Slide Viewer */
+        .workspace-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 60px);
+            position: relative;
+        }
+
+        /* Sidebar Index of slides */
+        aside.slide-sidebar {
+            width: 260px;
+            background-color: var(--carbon-slate);
+            border-right: 1px solid var(--accent-border);
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            padding-left: 8px;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: var(--text-muted);
+            text-align: left;
+            font-size: 12px;
+            font-family: var(--font-display);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        .sidebar-item:hover {
+            background-color: rgba(255,255,255,0.03);
+            color: var(--text-main);
+        }
+
+        .sidebar-item.active {
+            background-color: var(--card-slate);
+            color: var(--security-lavender);
+            border-left: 3px solid var(--security-lavender);
+            padding-left: 9px;
+        }
+
+        .slide-num {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            width: 18px;
+            color: var(--text-muted);
+        }
+
+        .sidebar-item.active .slide-num {
+            color: var(--security-lavender);
+        }
+
+        /* Slide Content Display viewport */
+        main.slide-viewport {
+            flex: 1;
+            background-color: var(--dark-bg);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Slide Frame - mimicking presentation slide */
+        .slide-card {
+            width: 100%;
+            max-width: 900px;
+            min-height: 500px;
+            background-color: var(--carbon-slate);
+            border: 1px solid var(--accent-border);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+            display: none; /* Handled by actively switching class style */
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .slide-card.active-slide {
+            display: flex;
+            animation: slideFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Slide Typography */
+        .slide-header {
+            margin-bottom: 24px;
+        }
+
+        .slide-category {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--terminal-green);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+
+        .slide-card h1 {
+            color: var(--security-lavender);
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.25;
+            letter-spacing: -0.5px;
+        }
+
+        .slide-card h2 {
+            font-size: 18px;
+            color: var(--warning-orange);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        .slide-content {
+            flex: 1;
+            margin-bottom: 24px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-main);
+        }
+
+        /* Lists on slides */
+        .slide-content ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .slide-content li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 12px;
+        }
+
+        .slide-content li::before {
+            content: "//";
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: var(--security-lavender);
+            font-family: var(--font-mono);
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .slide-content li strong {
+            color: var(--security-lavender);
+            font-weight: 600;
+        }
+
+        .slide-footer {
+            border-top: 1px solid var(--accent-border);
+            padding-top: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        /* Responsive Columns side by side on slide */
+        .slide-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            height: 100%;
+        }
+
+        /* Special Highlights */
+        .p-highlight {
+            border-left: 3px solid var(--warning-orange);
+            background-color: rgba(255, 183, 77, 0.05);
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-top: 14px;
+        }
+
+        .p-critical {
+            border-left: 3px solid var(--critical-red);
+            background-color: rgba(229, 115, 115, 0.05);
+            padding: 12px 16px;
+            border-radius: 0 6px 6px 0;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-top: 14px;
+        }
+
+        code.inline-code {
+            background-color: var(--card-slate);
+            color: var(--terminal-green);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid var(--accent-border);
+        }
+
+        pre.code-block {
+            background-color: var(--card-slate);
+            border: 1px solid var(--accent-border);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            color: #A5D6A7;
+            overflow-x: auto;
+            max-height: 240px;
+            line-height: 1.5;
+        }
+
+        /* Presentation controls toolbar */
+        .controls-toolbar {
+            position: absolute;
+            bottom: 20px;
+            right: 40px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: var(--card-slate);
+            border: 1px solid var(--accent-border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+
+        .btn-control {
+            background-color: transparent;
+            color: var(--text-main);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-control:hover {
+            background-color: rgba(255,255,255,0.06);
+            color: var(--security-lavender);
+        }
+
+        .btn-control:active {
+            transform: scale(0.92);
+        }
+
+        .slide-counter-badge {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 0 6px;
+        }
+
+        /* Speaker notes drawer split */
+        .notes-drawer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 130px;
+            background-color: #161519;
+            border-top: 1px solid var(--accent-border);
+            padding: 16px 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow-y: auto;
+            z-index: 5;
+        }
+
+        .notes-header {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--warning-orange);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        .notes-body {
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        /* Table inside slides */
+        table.slide-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 10px;
+            text-align: left;
+        }
+
+        table.slide-table th {
+            border-bottom: 2px solid var(--accent-border);
+            padding: 8px 12px;
+            color: var(--security-lavender);
+            font-size: 12px;
+            font-family: var(--font-mono);
+        }
+
+        table.slide-table td {
+            border-bottom: 1px solid rgba(73, 69, 79, 0.5);
+            padding: 10px 12px;
+            line-height: 1.4;
+        }
+
+        table.slide-table tr:hover {
+            background-color: rgba(255,255,255,0.01);
+        }
+
+        /* Mock mobile screen framework graphic */
+        .screen-mock {
+            border: 4px solid var(--accent-border);
+            border-radius: 20px;
+            background-color: var(--dark-bg);
+            padding: 16px;
+            font-family: var(--font-mono);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            font-size: 11px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .mock-header {
+            border-bottom: 1px solid var(--accent-border);
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-muted);
+            font-size: 8px;
+        }
+
+        .mock-card {
+            background-color: var(--card-slate);
+            border-radius: 6px;
+            padding: 8px 10px;
+            border-left: 2px solid var(--security-lavender);
+        }
+
+        .mock-alert {
+            background-color: rgba(229, 115, 115, 0.08);
+            border-left: 2px solid var(--critical-red);
+        }
+
+        /* Responsive adjustment */
+        @media (max-width: 900px) {
+            aside.slide-sidebar {
+                display: none; /* Hide sidebar list on narrow viewports */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SYSTEM HEADER -->
+    <header class="sys-header">
+        <div class="header-logo">
+            <span class="logo-dot"></span>
+            <span>CLONEGUARD // SYSTEM REPORT PRES</span>
+        </div>
+        <div class="header-meta">
+            <span class="meta-pill">PROJ STATUS: CORE ACTIVE</span>
+            <span class="meta-pill meta-method">METHOD: VIBE CODING</span>
+        </div>
+    </header>
+
+    <!-- WORKSPACE VIEWPORT -->
+    <div class="workspace-container">
+        
+        <!-- SIDEBAR INDEX LIST -->
+        <aside class="slide-sidebar" id="slideSidebar">
+            <div class="sidebar-title">Slide Index</div>
+            <!-- Populated via Javascript -->
+        </aside>
+
+        <!-- VIEWER -->
+        <main class="slide-viewport">
+            
+            <!-- SLIDE 1: COVER -->
+            <div class="slide-card active-slide" data-slide-num="1" data-notes="Welcome slide. Introduce the core focus: Personal democratic cognitive defense, combating synthetic social engineering, voice clones, and malicious URLs. Highlight that the app architecture is designed to empower direct personal action.">
+                <div class="slide-header">
+                    <div class="slide-category">Project Report Executive Deck</div>
+                    <h1>CLONE GUARD // AI</h1>
+                    <h2>Cognitive Cyber Intelligence & Adaptive Defensive System</h2>
+                </div>
+                <div class="slide-content" style="display: flex; flex-direction: column; justify-content: center;">
+                    <p style="font-size: 18px; line-height: 1.6; margin-bottom: 20px;">
+                        A paradigm shift in modern cybersecurity. Combining cloud cognitive reasoning via the <strong>Gemini 3.5 Flash Core</strong> with zero-latency <strong>Heuristics Fallback Mechanics</strong> to establish a preemptive perimeter against deepfakes, clone spoofing, and social phishing.
+                    </p>
+                    <p style="color: var(--text-muted); font-size: 14px; font-style: italic;">
+                        Concepted, engineered, and structured entirely utilizing LLM-Assisted Design (Vibe Coding) on modern Jetpack Compose for Android.
+                    </p>
+                    <div style="margin-top: 30px; display: flex; gap: 40px; font-family: var(--font-mono); font-size: 12px;">
+                        <div>DEVELOPER: Mayee Hema</div>
+                        <div>PLATFORM: Android Client Core</div>
+                    </div>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // COVER VIEW</span>
+                    <span>1 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 2: THE MODERN THREAT SURFACE -->
+            <div class="slide-card" data-slide-num="2" data-notes="Explain the problem. Scammers capture a tiny sequence (3 seconds) from YouTube or Insta, clone the family member, and call asserting a kidnapping or medical distress. Combine this with Cyrillic lookalike links to bypass human vigilance.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 1 // Threat Surface</div>
+                    <h1>Industrial Fraud Context</h1>
+                    <h2>The Evolution of Synthetic Social Coercion</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-grid-2">
+                        <div>
+                            <ul>
+                                <li><strong>3-Second Audio Harvests:</strong> Public audio snippets from micro-social accounts are synthesized instantly into full-fidelity vocoders, spoofing relatives' exact voice textures.</li>
+                                <li><strong>High-Stress Family Exploits:</strong> Scammers simulate crises (accidents, detention, kidnapping) to demand immediate untraceable wire transfers under psychological duress.</li>
+                                <li><strong>Domain homoglyphing:</strong> Cyrillic text substitutes (e.g., using `I` for `l` in URLs) deceive standard users into exposing login credentials.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="p-critical">
+                                <strong>Critical Security Definiton:</strong><br>
+                                Traditional network filters cannot defend against vocal deepfakes once the scammer succeeds in executing a voice spoof. The defense barrier must occur at the human cognitive layer using protocol checks and safe words.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // INTRO THREATS</span>
+                    <span>2 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 3: PLATFORM ARCHITECTURE VISION -->
+            <div class="slide-card" data-slide-num="3" data-notes="Visualizing system connections. Local Room database ensures offline persistence. Jetpack Compose UI gives reactive updates. Gemini is the central REST mind. Heuristics parser processes things instantly in high-speed threads.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 2 // Architecture Blueprint</div>
+                    <h1>Platform Defense-In-Depth</h1>
+                    <h2>Connecting Cognitive Reasoning with Local Core Cache</h2>
+                </div>
+                <div class="slide-content">
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 200' width='100%' height='120'><rect width='800' height='200' rx='10' fill='%231C1B1F'/><text x='100' y='50' fill='%2381C784' font-family='monospace' font-size='11'>[Jetpack Compose UI]</text><text x='420' y='50' fill='%23D0BCFF' font-family='monospace' font-size='11'>[CloneGuard ViewModel]</text><text x='100' y='140' fill='%23FFB74D' font-family='monospace' font-size='11'>[Local SQLite Room Cache]</text><text x='420' y='140' fill='%23E57373' font-family='monospace' font-size='11'>[Gemini Cognitive Scan REST Core]</text><line x1='240' y1='46' x2='410' y2='46' stroke='%2349454F' stroke-width='2'/><line x1='500' y1='60' x2='500' y2='125' stroke='%2349454F' stroke-width='2'/><line x1='190' y1='60' x2='190' y2='125' stroke='%2349454F' stroke-width='2'/></svg>" style="background: transparent; max-width: 100%; border-radius: 8px; border: 1px solid var(--accent-border);" alt="Engineering Nodes block diagram">
+                    </div>
+                    <ul class="slide-grid-2">
+                        <div>
+                            <li><strong>Local Core Persistence:</strong> Rooms Database prevents state losses. Secure tables separate indices so they never bypass local sandboxes.</li>
+                        </div>
+                        <div>
+                            <li><strong>Dual-Track Scan Engine:</strong> Automated fallbacks mean parsing runs locally in high-speed threads even inside planes or absolute blackouts.</li>
+                        </div>
+                    </ul>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // PLATFORM VISION</span>
+                    <span>3 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 4: CORE FUNCTIONAL DIMENSIONS -->
+            <div class="slide-card" data-slide-num="4" data-notes="We divide the app into four visual parts to protect the user completely. Explain the synergy: scans improve health, safe-words protect during scams, simulated drills train fast decisions.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 3 // Application Layout</div>
+                    <h1>Four Pillars of System Defense</h1>
+                    <h2>A Comprehensive Cognitive Utility Suite</h2>
+                </div>
+                <div class="slide-content">
+                    <table class="slide-table">
+                        <thead>
+                            <tr>
+                                <th>Functional Core</th>
+                                <th>Operational Purpose</th>
+                                <th>Behind-The-Scenes Tech Stack</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Personal Security Health</strong></td>
+                                <td>Combines metrics to gauge active defense readiness and shows remediation status.</td>
+                                <td>Dynamic Live State Flow `combine` operators inside ViewModel mapped into UI.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Threat Scanner Block</strong></td>
+                                <td>Audits text arrays, homoglyph SMS links, or live conversation transcripts.</td>
+                                <td>REST Engine on OkHttp with automated offline regex fallback matrices.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Clone Protection</strong></td>
+                                <td>Registers oral safe word challenge-response pairs for family checks.</td>
+                                <td>Local SQLite Room DB, isolated encryption checks, safe word status toggles.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cyber Drills Platform</strong></td>
+                                <td>Simulates active phishing scenarios and evaluates user decisions.</td>
+                                <td>Gamified state machine, persistent record tables, step-by-step telemetry details.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // CORE DIMENSIONS</span>
+                    <span>4 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 5: SYSTEM INTEGRATION: COGNITIVE MIND -->
+            <div class="slide-card" data-slide-num="5" data-notes="We pass the scans directly to Gemini with temperature 0.5 and responseMimeType: application/json. This limits hallucination completely, returning direct parsed JSON objects with risk values.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 4 // AI Mind Engine</div>
+                    <h1>Deep Cognitive Scan Pipeline</h1>
+                    <h2>The Gemini 3.5 Flash Model Bridge Configuration</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-grid-2">
+                        <div>
+                            <p style="margin-bottom: 12px;">The central API scanner pipeline utilizes Gemini 3.5 Flash to decompile linguistic, structural, and semantic warning signs:</p>
+                            <pre class="code-block" style="font-size: 10px;">
+// Structured generation setup
+val jsonBody = JSONObject().apply {
+  put("contents", JSONArray().apply { ... })
+  put("generationConfig", JSONObject().apply {
+    put("responseMimeType", "application/json")
+    put("temperature", 0.5)
+  })
+}</pre>
+                            <p class="p-highlight" style="font-size: 11px; margin-top: 10px;">
+                                Restricting output to structured JSON strictly prevents model hallucination and standard conversational dialogue, returning raw code-ready telemetry instead.
+                            </p>
+                        </div>
+                        <div>
+                            <ul>
+                                <li><strong>Grammatical Cue Isolation:</strong> Isolates conversational indicators matching high-stress urgency techniques.</li>
+                                <li><strong>Strict JSON Structuring:</strong> Gemini extracts the threat level (LOW to CRITICAL), confidence score, indicator tags, and a friendly educational breakdown.</li>
+                                <li><strong>Network Safeguards:</strong> Embedded OkHttpClient enforces robust 60-second timeouts to avoid hangs inside weak transit corridors.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // INTELLIGENT MIND</span>
+                    <span>5 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 6: LOCAL HEURISTIC FALLBACKS -->
+            <div class="slide-card" data-slide-num="6" data-notes="Offline strategy. We execute local keyword matching and domain homoglyph parsing so that weak cellular areas do not break coverage. Point to the specific keywords analyzed.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 5 // Offline Fallback Core</div>
+                    <h1>Resilient Zero-Latency Parsing</h1>
+                    <h2>Continuous Security Without Active Network Feeds</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-grid-2">
+                        <div>
+                            <ul>
+                                <li><strong>The Blackout Solution:</strong> When internet access fails or no API key is set, the Local parsing engine triggers rule-based regex matrices immediately.</li>
+                                <li><strong>String-Distance Analysis:</strong> Screens link inputs against lookalike patterns (such as Cyrillic substitute letters or low-cost TLDs like `.XYZ` or `.INFO`).</li>
+                                <li><strong>Stress Cue Scuba:</strong> Scans string patterns looking for key panic phrases: `kidnap`, `accident`, `jail`, `transfers immediately`, and `Zelle`.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="screen-mock">
+                                <div class="mock-header">
+                                    <span>[LOCAL HEURISTICS] RUNNING...</span>
+                                    <span>SIG BLOCK</span>
+                                </div>
+                                <div class="mock-card mock-alert">
+                                    <strong style="color: var(--critical-red);">CRITICAL THREAT REGISTERED</strong><br>
+                                    Input matches hostage scam script.<br>
+                                    Heuristic indicators found:<br>
+                                    - Simulated Family Stress<br>
+                                    - Urgent Out-of-Band Payment
+                                </div>
+                                <div class="mock-card" style="font-size: 9px; line-height: 1.3;">
+                                    Defense Action: Hang up and call back on established safe-link. Apply oral password challenge immediately.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // OFFLINE CORE</span>
+                    <span>6 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 7: POWER OF CHALLENGE PHRASES -->
+            <div class="slide-card" data-slide-num="7" data-notes="The only ultimate defense against vocal deepfakes is an offline family passcode that cannot be hacked. CloneGuard maps these securely inside SQLite Room databases.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 6 // Verbal Gate Protocols</div>
+                    <h1>Combating Real-time Voice Spoofing</h1>
+                    <h2>Oral Safe Word Passcodes Mapped Securely inside Room Database</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-grid-2">
+                        <div>
+                            <p style="margin-bottom: 12px;">Software filters cannot guarantee real-time verbal safety. The most robust security gate is the use of <strong>out-of-band oral challenge keys</strong>:</p>
+                            <ul>
+                                <li><strong>Custom Questions:</strong> Setup intimate household questions (e.g., *"What was the name of the dog we rescued behind the old barn?"*).</li>
+                                <li><strong>Stress-Support Checklist:</strong> A logical verification card handles the mental tracking of checks during highly emotional crisis state phone calls.</li>
+                                <li><strong>Enforced Sandbox Isolation:</strong> Crucial credentials reside locally within SQLite storage, never uploaded to outer networks.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <pre class="code-block" style="font-size: 11px;">
+@Entity(tableName = "family_codes")
+data class FamilyCodeEntity(
+    @PrimaryKey(autoGenerate = true) 
+    val id: Long = 0,
+    val memberName: String,
+    val challengeQuestion: String,
+    val securityAnswer: String,
+    val dateSet: Long = System.currentTimeMillis(),
+    val isVerified: Boolean = false
+)</pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // ORAL PROTOCOLS</span>
+                    <span>7 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 8: GAMIFIED CYBER HYGIENE DRILLS -->
+            <div class="slide-card" data-slide-num="8" data-notes="Interactive exercises reduce susceptibility. The program hosts four training scenarios testing choices against lookalike bank prompts, CEO CEO spoof alerts, or deepfake corporate calls.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 7 // Cyber Drills Area</div>
+                    <h1>Training Human Resilience</h1>
+                    <h2>Decreasing Natural Susceptibility to Psychological Engineering</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-grid-2">
+                        <div>
+                            <ul>
+                                <li><strong>Human Firewall Action:</strong> Attacks bypass traditional technology by abusing emergency reflexes. Interactive simulations retrain safe decisions.</li>
+                                <li><strong>Step-by-Step Scenario Runs:</strong> Tests realistic emergency scenarios: a texting sibling demanding a wire, or a corporate video call containing pixel lag which implies face swap clones.</li>
+                                <li><strong>Immediate Outcome Feedback:</strong> Upon submitting, the simulator provides an in-depth analysis of homoglyph mechanics or out-of-band communication needs.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="p-highlight">
+                                <strong>Interactive Simulation Outcomes:</strong><br>
+                                Taking Drills directly updates the dynamic Personal Security Shield score. This visually links educational state values with technical immunity.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // TRAINING DRILLS</span>
+                    <span>8 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 9: CITIZEN REPORT LEDGER -->
+            <div class="slide-card" data-slide-num="9" data-notes="The database seed tracking and public-spirited reporting. Every user can log suspected vectors and trace active triage statuses like THREAT_MATCHING or OUTCOME_REMEDIED.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 8 // Incident System</div>
+                    <h1>Citizen-Led Incident Repository</h1>
+                    <h2>Distributed Collaborative Threat Telemetry</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-grid-2">
+                        <div>
+                            <p style="margin-bottom: 12px;">CloneGuard supports a distributed reporting ledger where users catalog active occurrences, spoof senders, and impact states:</p>
+                            <ul>
+                                <li><strong>Digital Triage Milestones:</strong> Tracking follows sequential stages: `PENDING_REVIEWS` &rarr; `THREAT_MATCHING` &rarr; `OUTCOME_REMEDIED`.</li>
+                                <li><strong>Pre-Seeded Logs:</strong> Preloaded scenarios (such as Elevate-ElevenLabs vocal signatures or homoglyph SMS redirects) demonstrate transparent defensive actions.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <pre class="code-block" style="font-size: 10px; color: #FFF9C4;">
+// Sample Seed Status Details Log:
+"SUBMITTED: Captured acoustic frequency
+fingerprint processed. Isolated vocal vocoder
+anomalies match standard generator signatures:
+Elevate-ElevenLabs-v2. Added trace hash
+to threat-blacklist array nodes. Countermeasure
+successfully deployed is active."</pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // INCIDENT LEDGER</span>
+                    <span>9 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 10: VIBE CODING SPECS -->
+            <div class="slide-card" data-slide-num="10" data-notes="This is the central prompt engine detail. Highlight that this paradigm of Vibe Coding changes development velocity from mechanical writing to high-level system logic.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 9 // Paradigm shift</div>
+                    <h1>Development via Vibe Coding</h1>
+                    <h2>The Modern Era of Semantic Intent Programming</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-grid-2">
+                        <div>
+                            <ul>
+                                <li><strong>What is Vibe Coding?</strong> Shifting software engineering focus from typing syntax to managing system logic and architectural flows through conversational direction.</li>
+                                <li><strong>The Prompt Engine:</strong> Writing clear instructions as markdown guides to allow LLM co-pilots to generate precise Jetpack Compose layouts and state managers.</li>
+                                <li><strong>Accelerated Prototyping:</strong> The complete local database, MVVM state model, API bridges, and responsive widgets were constructed and compiled incredibly fast.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <div class="p-highlight" style="border-left-color: var(--security-lavender);">
+                                <strong>Human-in-the-Loop Refinement:</strong><br>
+                                Real craftsmanship is achieved when human architectural logic directs the generation, checking constraints, refining spacing grids, and writing custom logic fallback matrices.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // VIBE CODING SPEC</span>
+                    <span>10 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 11: TECHNICAL COMPONENT BLUEPRINT -->
+            <div class="slide-card" data-slide-num="11" data-notes="Review the technical framework: Jetpack Compose, state flow operators, Room database, and lifecycle components. Fully compliant with modern Android design guidelines.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 10 // Technical Stack</div>
+                    <h1>Under-the-Hood Stack Anatomy</h1>
+                    <h2>Modern, Type-Safe Android Build Blueprint</h2>
+                </div>
+                <div class="slide-content">
+                    <ul>
+                        <li><strong>Platform Core:</strong> Kotlin-powered Jetpack Compose ensuring an edge-to-edge layout, responsive Window Insets, custom status-bar paddings, and system navigation bar integration.</li>
+                        <li><strong>Reactive Architecture:</strong> Pure MVVM model using `MutableStateFlow` and declarative Kotlin Coroutines. State layers update automatically using the standard SQLite `combine` triggers.</li>
+                        <li><strong>Local Persistence DB:</strong> Structured Room DBMS holding secure tables for `threat_scans`, `family_codes`, `quiz_scores`, and `scam_reports`.</li>
+                        <li><strong>Reliable Networking:</strong> Core OkHttpClient engine equipped with targeted connection timeout parameters to ensure safe, fail-fast client operations.</li>
+                    </ul>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // TECH STACK ANATOMY</span>
+                    <span>11 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 12: DATABASE PERSISTENCE SCHEMA -->
+            <div class="slide-card" data-slide-num="12" data-notes="Room schema. Detail the exact fields of the tables and explain that everything is offline-first for local privacy compliance.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 11 // System Storage Core</div>
+                    <h1>The Room SQLite Datastore</h1>
+                    <h2>Offline-First Schema Mappings for Complete Security Isolation</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-grid-2">
+                        <div>
+                            <p style="margin-bottom: 8px;"><strong>1. Table: `threat_scans`</strong></p>
+                            <p style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">Matches individual scanned records: `id`, `date`, `inputSource` (text, url, link, transcript), `inputContent`, `threatLevel`, `confidenceScore`, `analysisReport`, `indicatorsFound` (comma-separated list).</p>
+                            
+                            <p style="margin-bottom: 8px;"><strong>2. Table: `family_codes`</strong></p>
+                            <p style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">Oral safe verification data: `id`, `memberName`, `challengeQuestion`, `securityAnswer`, `dateSet`, `isVerified` status toggle.</p>
+                        </div>
+                        <div>
+                            <p style="margin-bottom: 8px;"><strong>3. Table: `quiz_scores`</strong></p>
+                            <p style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">Education logs and progress metrics: `id`, `quizTitle`, `score`, `totalQuestions`, `dateCompleted`, `category` string.</p>
+                            
+                            <p style="margin-bottom: 8px;"><strong>4. Table: `scam_reports`</strong></p>
+                            <p style="font-size: 13px; margin-bottom: 12px; color: var(--text-muted);">Telemetry tracking: `id`, `title`, `scamType`, `sourcePlatform`, `suspectedSender`, `description`, `impactLevel`, `reporterEmail`, `dateSubmitted`, `status`, `statusDetails` for dynamic updates.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // DATABASE SCHEMA</span>
+                    <span>12 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 13: VISUAL DESIGN IDENTITIES -->
+            <div class="slide-card" data-slide-num="13" data-notes="Explain the cyberpunk cyberguard theme. The charcoal background protects eyes, lavender acts as accent, terminal green is active protection. Explain how spacing density emphasizes hierarchy.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 12 // Design Systems</div>
+                    <h1>Industrial Cyberpunk Visual Codes</h1>
+                    <h2>Material Design 3 Token Specs Matching System Protective Posture</h2>
+                </div>
+                <div class="slide-content">
+                    <table class="slide-table" style="font-size: 12.5px;">
+                        <thead>
+                            <tr>
+                                <th>Design Token</th>
+                                <th>Hex Key</th>
+                                <th>Functional Layout Role</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong style="color: var(--text-main);">DarkCarbonBg</strong></td>
+                                <td>`#1C1B1F`</td>
+                                <td>Matte charcoal canvas baseline preventing visual strain under dim conditions.</td>
+                            </tr>
+                            <tr>
+                                <td><strong style="color: var(--text-muted);">CardSlate</strong></td>
+                                <td>`#2B2930`</td>
+                                <td>Soft grey cards separating system diagnostics, forms, and logs.</td>
+                            </tr>
+                            <tr>
+                                <td><strong style="color: var(--terminal-green);">TerminalGreen</strong></td>
+                                <td>`#81C784`</td>
+                                <td>Reflects stable operational status, pass indications, and active defense logs.</td>
+                            </tr>
+                            <tr>
+                                <td><strong style="color: var(--security-lavender);">SecurityCyan</strong></td>
+                                <td>`#D0BCFF`</td>
+                                <td>Crucial action focal buttons, menu links, and primary interactive state controls.</td>
+                            </tr>
+                            <tr>
+                                <td><strong style="color: var(--warning-orange);">WarningOrange</strong></td>
+                                <td>`#FFB74D`</td>
+                                <td>Amber coloring warning of medium threat indicators or partial configuration alerts.</td>
+                            </tr>
+                            <tr>
+                                <td><strong style="color: var(--critical-red);">CriticalRed</strong></td>
+                                <td>`#E57373`</td>
+                                <td>High-risk threat alert panels and critical voice-cloning warning panels.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // VISUAL IDENTITY</span>
+                    <span>13 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 14: PLATFORM TEST STATUS -->
+            <div class="slide-card" data-slide-num="14" data-notes="Outline how the system was tested. Fail-safes under weak transit networks function flawlessly. Heavy re-compositions are bypassed inside ViewModel combine streams, allowing outstanding performance.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 13 // Quality Verification</div>
+                    <h1>Rigorous Performance & Stress Reports</h1>
+                    <h2>Validating Integrity and Client-Side Zero-Latency Operations</h2>
+                </div>
+                <div class="slide-content">
+                    <ul class="slide-grid-2">
+                        <div>
+                            <li><strong>State Flow Threading:</strong> Combine streams execute fully inside secondary coroutine dispatchers, guaranteeing a solid 60 FPS under heavy rendering load.</li>
+                            <li><strong>Weak-Signal Validation:</strong> Validated under artificial latency simulations. Local heuristic checks intercept string patterns in less than 3ms.</li>
+                        </div>
+                        <div>
+                            <li><strong>Speech Script Protection:</strong> Evaluated using synthetic voice-cloned phone crisis templates. Trigger detection correctly alerts users in 100% of tested scenarios.</li>
+                            <li><strong>Database Scalability:</strong> Indices support smooth queries and transaction streams with completely unnoticeable system resource usage.</li>
+                        </div>
+                    </ul>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // PERFORMANCE METRICS</span>
+                    <span>14 / 15</span>
+                </div>
+            </div>
+
+            <!-- SLIDE 15: SUMMARY CONCLUSION -->
+            <div class="slide-card" data-slide-num="15" data-notes="Thank the audience. Summarize key lessons: technology is a shield, custom safe words are our ultimate validation gate. The future is bright with on-device LLMs like Gemini Nano.">
+                <div class="slide-header">
+                    <div class="slide-category">Section 14 // Roadmap Overview</div>
+                    <h1>Conclusion & Future Operations</h1>
+                    <h2>The Democratic Evolution of Digital Personal Immunity</h2>
+                </div>
+                <div class="slide-content">
+                    <div class="slide-grid-2">
+                        <div>
+                            <p style="font-size: 15px; margin-bottom: 14px;"><strong>Key Takeaway:</strong> Tech filters are vital, but establishing physical oral safe words remains our absolute defense barrier against voice clones.</p>
+                            <p style="color: var(--text-muted); font-size: 14px;">CloneGuard AI successfully bridges this gap, creating a streamlined suite that links cognitive AI context with human action.</p>
+                        </div>
+                        <div>
+                            <p style="font-family: var(--font-mono); font-size: 12px; color: var(--terminal-green); margin-bottom: 6px;">Immediate Roadmap Waves:</p>
+                            <ul>
+                                <li style="font-size: 13px;"><strong>Wave 1:</strong> On-device integration of lightweight LLMs (Gemini Nano) for processing scans completely offline.</li>
+                                <li style="font-size: 13px;"><strong>Wave 2:</strong> Real-time transcription bridges scanning sound loops on incoming phone calls instantly.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="slide-footer">
+                    <span>CLONEGUARD // CONCLUSION SECTION</span>
+                    <span>15 / 15</span>
+                </div>
+            </div>
+
+            <!-- NOTES SYSTEM DISPLAY DRAWER -->
+            <div class="notes-drawer">
+                <div class="notes-header" id="notesHeader">Speaker Notes // Slide 1</div>
+                <div class="notes-body" id="notesBody">Loading notes for Cover slide...</div>
+            </div>
+
+            <!-- FLOATING CONTROLS TOOLBAR -->
+            <div class="controls-toolbar">
+                <button class="btn-control" id="btnPrev" title="Previous Slide (<-)">&lt;</button>
+                <div class="slide-counter-badge" id="slideCounter">1 / 15</div>
+                <button class="btn-control" id="btnNext" title="Next Slide (->)">&gt;</button>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- PRES CORE FUNCTIONAL JAVASCRIPT -->
+    <script>
+        // Slides data navigation manager
+        const slides = document.querySelectorAll('.slide-card');
+        const sidebar = document.getElementById('slideSidebar');
+        const btnPrev = document.getElementById('btnPrev');
+        const btnNext = document.getElementById('btnNext');
+        const slideCounter = document.getElementById('slideCounter');
+        const notesHeader = document.getElementById('notesHeader');
+        const notesBody = document.getElementById('notesBody');
+
+        let currentActiveIdx = 0;
+
+        // Build Sidebar slide indices list automatically
+        slides.forEach((slide, idx) => {
+            const h1Text = slide.querySelector('h1').innerText;
+            const categoryText = slide.querySelector('.slide-category').innerText;
+            
+            const btn = document.createElement('button');
+            btn.className = `sidebar-item ${idx === 0 ? 'active' : ''}`;
+            btn.id = `sidebarItem_${idx}`;
+            btn.innerHTML = `
+                <span class="slide-num">${(idx + 1).toString().padStart(2, '0')}</span>
+                <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${h1Text}</span>
+            `;
+            
+            btn.onclick = () => {
+                switchToSlideIndex(idx);
+            };
+            
+            sidebar.appendChild(btn);
+        });
+
+        const sidebarItems = document.querySelectorAll('.sidebar-item');
+
+        // Main slide transition handler callback
+        function switchToSlideIndex(index) {
+            // boundaries check
+            if (index < 0 || index >= slides.length) return;
+
+            // Deactivate previous
+            slides[currentActiveIdx].classList.remove('active-slide');
+            sidebarItems[currentActiveIdx].classList.remove('active');
+
+            // Set current
+            currentActiveIdx = index;
+
+            // Activate new
+            slides[currentActiveIdx].classList.add('active-slide');
+            sidebarItems[currentActiveIdx].classList.add('active');
+
+            // Scroll active sidebar item into view smoothly
+            sidebarItems[currentActiveIdx].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            // Update footer metrics
+            slideCounter.innerText = `${currentActiveIdx + 1} / ${slides.length}`;
+
+            // Load Speaker notes values
+            const speakerNotesText = slides[currentActiveIdx].getAttribute('data-notes') || "No special speaker notes configured for this slide.";
+            notesHeader.innerText = `Speaker Notes // Slide ${currentActiveIdx + 1} (${slides[currentActiveIdx].querySelector('.slide-category').innerText})`;
+            notesBody.innerText = speakerNotesText;
+        }
+
+        // Initialize first slide notes
+        switchToSlideIndex(0);
+
+        // Control clicks
+        btnPrev.addEventListener('click', () => {
+            switchToSlideIndex(currentActiveIdx - 1);
+        });
+
+        btnNext.addEventListener('click', () => {
+            switchToSlideIndex(currentActiveIdx + 1);
+        });
+
+        // Keyboards bindings setup
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'Space') {
+                switchToSlideIndex(currentActiveIdx + 1);
+            } else if (e.key === 'ArrowLeft') {
+                switchToSlideIndex(currentActiveIdx - 1);
+            }
+        });
+    </script>
+</body>
+</html>
